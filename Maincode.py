@@ -24,7 +24,7 @@ def lowest_obstacle():
     return x,y
 
 
-movement = 3.5
+movement = 3
 # Classes
 class Player(pygame.sprite.Sprite):
     def __init__(self):
@@ -51,10 +51,17 @@ class Player(pygame.sprite.Sprite):
 
         for obstacle in obstacle_group:
             if self.rect.colliderect(obstacle.rect):
-                if self.gravity < 0 :
-                    self.rect.top = obstacle.rect.bottom + 11
-                    self.gravity = 0
-                elif self.gravity > 0:
+                print("touching")
+                if floating:
+                    if self.rect.top >= obstacle.rect.bottom - 5 or self.gravity < 0:
+                        self.rect.top = obstacle.rect.bottom 
+                        print("down")
+                        self.gravity = 0
+                else:
+                    if self.gravity < 0 :
+                        self.rect.top = obstacle.rect.bottom + 6
+                        self.gravity = 0
+                if self.gravity > 0  and floating == False:
                     self.rect.bottom = obstacle.rect.top + 7
                     self.gravity = 0
 #                elif self.gravity < 0 :
@@ -105,6 +112,12 @@ class Powerup_speed(pygame.sprite.Sprite):
         self.image = pygame.image.load("Graphics/speedpowerup.png").convert_alpha()
         self.rect = self.image.get_rect(midbottom=(speed_x, speed_y))
 
+class Powerup_jetpack(pygame.sprite.Sprite):
+    def __init__(self, jetpack_x, jetpack_y):
+        super().__init__()
+        self.image = pygame.image.load("Graphics/jetpackpowerup.png").convert_alpha()
+        self.rect = self.image.get_rect(midbottom=(jetpack_x, jetpack_y))
+
 class level(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
@@ -133,8 +146,8 @@ def generate_obstacles(num,obstacle_num, up):
 #    obstacle_group.empty()
     ten_obstacles = False
     generating = True
-    spacing = 30
-    max_spacing = 50
+    spacing = 20
+    max_spacing = 40
     obstacle_number = 0
     while generating:
         if ten_obstacles:
@@ -149,12 +162,12 @@ def generate_obstacles(num,obstacle_num, up):
             else: 
                 if random.randint(1,2) !=0:
                     obstacle_x = randint(94, Width - 94) 
-                    obstacle_y = randint(-50, -7)
+                    obstacle_y = randint(-50, -9)
                     obstacle = Obstacles(obstacle_x, obstacle_y)
                     obstacle_group.add(obstacle)
                 else:
                     obstacle_x = randint(94, Width - 94)
-                    obstacle_y = randint(-50, -7)
+                    obstacle_y = randint(-50, -9)
                     obstacle_spiky = Obstacles_spiky(obstacle_x, obstacle_y)
                     obstacle_spiky_group.add(obstacle_spiky)
 
@@ -170,11 +183,17 @@ def generate_obstacles(num,obstacle_num, up):
             break
             #print("cool")
 
-def generate_powerup():
-    speed_y = randint(-50,-26)
-    speed_x = randint(28, Width - 28)
-    speed = Powerup_speed(speed_x,speed_y)
-    speed_group.add(speed)
+def generate_powerup(powerup):
+    if powerup == "speed":
+        speed_y = randint(-50,-26)
+        speed_x = randint(28, Width - 28)
+        speed = Powerup_speed(speed_x,speed_y)
+        speed_group.add(speed)
+    elif powerup == "jetpack":
+        jetpack_y = randint(-50,-26)
+        jetpack_x = randint(28, Width - 28)
+        jetpack = Powerup_jetpack(jetpack_x,jetpack_y)
+        jetpack_group.add(jetpack)
 
     #print("added")
 
@@ -221,6 +240,7 @@ level_group = pygame.sprite.Group()
 level_group.add(level)
 
 speed_group = pygame.sprite.Group()
+jetpack_group = pygame.sprite.Group()
 
 # Keys
 keys = pygame.key.get_pressed()
@@ -230,9 +250,13 @@ game_active = True
 running = True
 last_action_time2 = time.time()
 last_action_time3 = time.time()
+last_action_time4 = time.time()
 last_action_time = time.time()
 score = test_font.render("0", False, "Red")
 spawn_time = 0.6
+floating = False
+sped_up = False
+powerups = ["speed","jetpack"]
 while running:
     if game_active:
         #print(game_active)
@@ -242,35 +266,44 @@ while running:
 
         if player.rect.y >= 600:
             game_active = False
-        #elif player.rect.y >= 0:
-        #    player.rect.y += 1
+        if player.rect.y <= 0:
+            player.rect.y == 3
 
         if player.rect.x <= 0:
             player.rect.x = 3
         elif player.rect.x >= 470:
             player.rect.x = 470 
+        for jetpack in jetpack_group:
+            jetpack.rect.y += 4
+            if player.rect.colliderect(jetpack.rect):
+                last_action_time4 = current_time
+                elapsed_time4 = 0
+                floating = True
+                jetpack_group.empty()
 
         for speed in speed_group:
             if player.rect.colliderect(speed.rect):
+                print("touched")
+                last_action_time3  = current_time
+                elapsed_time3 = 0
                 movement = movement / 2
-                spawn_time = spawn_time * 3.25
+                spawn_time = spawn_time * 2.5
                 print(movement)
                 speed_group.empty()
-                if elapsed_time3 >= 10:
-                    movement = 3.5
-                    #print("cool")
-                    # Update the last action time
-                    last_action_time3  = current_time
-                break
+                sped_up = True
 
-        if randint(1,600) == 1:
-            generate_powerup()
+
+
+        if randint(1,300) == 1:
+            random.shuffle(powerups)
+            generate_powerup(powerups[1])
 
         level_group.draw(screen)
         player_group.draw(screen)
         obstacle_group.draw(screen)
         obstacle_spiky_group.draw(screen)
         speed_group.draw(screen)
+        jetpack_group.draw(screen)
         screen.blit(score,(5,-30))
 
         player.update(movement)
@@ -278,14 +311,32 @@ while running:
         current_time = time.time()
         elapsed_time = current_time - last_action_time
         elapsed_time2 = current_time - last_action_time2
-        elapsed_time3 = current_time - last_action_time3
-        score = test_font.render(str(int(elapsed_time2)), False, "Red")
+        if sped_up:
+            if int(elapsed_time3) == 10:
+                spawn_time = spawn_time / 2.5
+                movement = 3.5
+                #print("cool")
+                # Update the last action time
+                last_action_time3  = current_time
+                sped_up = False
+            elapsed_time3 = current_time - last_action_time3
+            print(elapsed_time3)
+        score = test_font.render(str(int(elapsed_time2)), False, "grey")
 
         if elapsed_time >= spawn_time:
             generate_obstacles(obstacle_num + 1,obstacle_num,True)
             #print("cool")
-            # Update the last action time
+            # Update the last action tim e
             last_action_time = current_time
+
+        if floating == True:
+            print("cool")
+            player.gravity = 0
+            player.rect.y -= 0.000000000001
+            elapsed_time4 = current_time - last_action_time4
+            if int(elapsed_time4) == 10:
+                last_action_time4 = current_time
+                floating = False
 
 
         for speed in speed_group:
@@ -308,6 +359,7 @@ while running:
                 running = False
 
         if pygame.key.get_pressed()[pygame.K_r]:
+            floating = False
             spawn_time = 0.6
             movement = 3.5
             last_action_time2 = time.time()
