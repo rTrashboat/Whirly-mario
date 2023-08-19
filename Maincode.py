@@ -6,6 +6,14 @@ import winsound
 from sys import exit
 import time
 #from level.py import Level
+sound_playing = False
+def play_wav(file_path):
+    global sound
+    pygame.init()
+    pygame.mixer.init()
+    sound = pygame.mixer.Sound(file_path)
+    sound.play()
+    sound_playing = False
 
 def heighest_obstacle():
     y = 0
@@ -24,7 +32,7 @@ def lowest_obstacle():
     return x,y
 
 
-movement = 3
+movement = 3.5
 # Classes
 class Player(pygame.sprite.Sprite):
     def __init__(self):
@@ -51,11 +59,11 @@ class Player(pygame.sprite.Sprite):
 
         for obstacle in obstacle_group:
             if self.rect.colliderect(obstacle.rect):
-                print("touching")
+                #print("touching")
                 if floating:
                     if self.rect.top >= obstacle.rect.bottom - 5 or self.gravity < 0:
                         self.rect.top = obstacle.rect.bottom 
-                        print("down")
+                        #print("down")
                         self.gravity = 0
                 else:
                     if self.gravity < 0 :
@@ -64,21 +72,14 @@ class Player(pygame.sprite.Sprite):
                 if self.gravity > 0  and floating == False:
                     self.rect.bottom = obstacle.rect.top + 7
                     self.gravity = 0
-#                elif self.gravity < 0 :
-#                    self.rect.top = obstacle.rect.bottom
-#                    self.gravity = 0
+
             keys = pygame.key.get_pressed()
-            if (keys[pygame.K_SPACE] or keys[pygame.K_UP]) and self.rect.bottom >= obstacle.rect.top + 1 and self.rect.colliderect(obstacle.rect):
-                #if self.rect.colliderect(obstacle.rect):
-                #    self.rect.bottom = obstacle.rect.top - 50
+            if (keys[pygame.K_SPACE] or keys[pygame.K_UP] or keys[pygame.K_z]) and self.rect.bottom >= obstacle.rect.top + 1 and self.rect.colliderect(obstacle.rect):
                 self.gravity = -15
+                #play_wav("sounds/jump.wav")
 
     def input(self):
         keys = pygame.key.get_pressed()
-#        if keys[pygame.K_SPACE] or (keys[pygame.K_UP] and self.rect.bottom >= obstacle.rect.top + 1 and self.gravity > 0 and self.rect.colliderect(obstacle.rect)):
-#            if self.rect.colliderect(obstacle.rect):
-#                self.rect.bottom = obstacle.rect.top - 2
-#            self.gravity = -20
         if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
             self.direction.x = 1.5
         elif keys[pygame.K_LEFT] or keys[pygame.K_q]  or keys[pygame.K_a]:
@@ -226,7 +227,11 @@ pygame.display.set_icon(icon)
 obstacle_spiky_group = pygame.sprite.Group()
 obstacle_group = pygame.sprite.Group()
 obstacle_num = generate_obstacles(1,obstacle_num,False)
-print(obstacle_num)
+#print(obstacle_num)
+
+#images
+speed_icon = pygame.image.load("Graphics/speedpowerup.png")
+jetpack_icon = pygame.image.load("Graphics/jetpackpowerup.png")
 
 # Player
 player = Player()
@@ -251,6 +256,8 @@ running = True
 last_action_time2 = time.time()
 last_action_time3 = time.time()
 last_action_time4 = time.time()
+last_action_time5 = time.time()
+last_action_time6 = time.time()
 last_action_time = time.time()
 score = test_font.render("0", False, "Red")
 spawn_time = 0.6
@@ -259,15 +266,34 @@ sped_up = False
 powerups = ["speed","jetpack"]
 while running:
     if game_active:
+        if not sound_playing:
+            # Play the sound
+            play_wav("music/music.wav")
+            sound_playing = True
+
+        # Check if the sound has finished playing
+        if sound_playing and not pygame.mixer.get_busy():
+            sound_playing = False
+
         #print(game_active)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
 
+        for speed in speed_group:
+            if speed.rect.y >= 600:
+                speed_group.empty()
+        for jetpack in jetpack_group:
+            if jetpack.rect.y >= 600:
+                jetpack_group.empty()
+
         if player.rect.y >= 600:
+            sound.stop()
+            sound_playing = False
             game_active = False
         if player.rect.y <= 0:
-            player.rect.y == 3
+            player.rect.y = 0
+            player.gravity = 0.5
 
         if player.rect.x <= 0:
             player.rect.x = 3
@@ -283,18 +309,18 @@ while running:
 
         for speed in speed_group:
             if player.rect.colliderect(speed.rect):
-                print("touched")
+                #print("touched")
                 last_action_time3  = current_time
                 elapsed_time3 = 0
-                movement = movement / 2
-                spawn_time = spawn_time * 2.5
-                print(movement)
+                movement = 1.75
+                spawn_time = 1.5
+                #print(movement)
                 speed_group.empty()
                 sped_up = True
 
 
 
-        if randint(1,300) == 1:
+        if randint(1,2) == 1 and not sped_up and not floating and len(jetpack_group.sprites()) <= 0 and len(speed_group.sprites()) <= 0:
             random.shuffle(powerups)
             generate_powerup(powerups[1])
 
@@ -313,14 +339,14 @@ while running:
         elapsed_time2 = current_time - last_action_time2
         if sped_up:
             if int(elapsed_time3) == 10:
-                spawn_time = spawn_time / 2.5
+                spawn_time = 0.6
                 movement = 3.5
                 #print("cool")
                 # Update the last action time
                 last_action_time3  = current_time
                 sped_up = False
             elapsed_time3 = current_time - last_action_time3
-            print(elapsed_time3)
+            #print(elapsed_time3)
         score = test_font.render(str(int(elapsed_time2)), False, "grey")
 
         if elapsed_time >= spawn_time:
@@ -330,7 +356,7 @@ while running:
             last_action_time = current_time
 
         if floating == True:
-            print("cool")
+            #print("cool")
             player.gravity = 0
             player.rect.y -= 0.000000000001
             elapsed_time4 = current_time - last_action_time4
@@ -364,6 +390,7 @@ while running:
             movement = 3.5
             last_action_time2 = time.time()
             current_time = time.time()
+            jetpack_group.empty()
             speed_group.empty()
             obstacle_spiky_group.empty()
             obstacle_group.empty()
