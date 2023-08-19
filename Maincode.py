@@ -320,7 +320,7 @@ while running:
 
 
 
-        if randint(1,2) == 1 and not sped_up and not floating and len(jetpack_group.sprites()) <= 0 and len(speed_group.sprites()) <= 0:
+        if randint(1,3000) == 1 and not sped_up and not floating and len(jetpack_group.sprites()) <= 0 and len(speed_group.sprites()) <= 0:
             random.shuffle(powerups)
             generate_powerup(powerups[1])
 
